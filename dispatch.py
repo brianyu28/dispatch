@@ -1,6 +1,23 @@
 """
 Dispatch
 Brian Yu
+
+A command-line mail merge tool.
+
+Your configuration JSON file should include:
+    - from
+    - password (optional)
+    - to (list)
+    - cc (list, optional)
+    - bcc (list, optional)
+    - subject
+    - body
+    - server (optional)
+    - port (optional)
+
+Your data CSV file should include:
+    - Row 0: each column is a keyword name
+    - Rows 1+: each column defines values for a new email
 """
 
 import argparse
