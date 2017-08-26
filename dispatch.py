@@ -7,10 +7,10 @@ import argparse
 import csv
 import getpass
 import json
-import termcolor
-import traceback
 import smtplib
 import sys
+import termcolor
+import traceback
 
 from email.mime.text import MIMEText
 
@@ -78,6 +78,7 @@ def format_param(contents, headers, row):
     """
     Substitutes values (rows) based on keywords (headers) present in contents.
     """
+
     def format_param_string(contents, headers, row):
         """
         Performs substitution upon a string.
