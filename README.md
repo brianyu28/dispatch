@@ -20,7 +20,7 @@ A sample `config.json` file is below:
     "password": "PASSWORD",
     "to": ["{email}"],
     "subject": "Hello to {name}!",
-    "body": "Dear {names},<br/><br/>Hello, world!"
+    "body": "Dear {name},<br/><br/>Hello, world!"
 }
 ```
 
