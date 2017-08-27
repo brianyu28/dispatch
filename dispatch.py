@@ -123,7 +123,10 @@ def mail_server(config):
     )
     server.ehlo()
     server.starttls()
-    server.login(config.get("from", ""), config.get("password", ""))
+    try:
+        server.login(config.get("from", ""), config.get("password", ""))
+    except smtplib.SMTPAuthenticationError:
+        raise Error("Invalid username or password.")
     return server
 
 

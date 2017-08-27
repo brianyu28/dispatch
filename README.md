@@ -31,3 +31,7 @@ email,name
 person1@example.com,Person 1
 person2@example.com,Person 2
 ```
+
+## Notes
+
+* For Google email addresses with 2-factor authentication, you'll need to create and use an [App Password](https://security.google.com/settings/security/apppasswords) to use Dispatch.
