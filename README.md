@@ -8,7 +8,7 @@ Dispatch requires two files to start a mail merge:
 
 * A configuration file, typically called `config.json`, which contains the sender's email address, password, recipients (to, cc, bcc), a subject line, and a body. Fields may be parameterized with a keyword placeholder between `{` and `}`, which will be substituted for by the dispatcher.
   * The configuration file may also specify a custom server and port (Gmail is the default).
-  * The "from" address and the password cannot be parameterized.
+  * The "from" address, the password, the server, and the port cannot be parameterized.
   * If no password is specified, the user is prompted to type it in.
 * A data file, typically called `data.csv`, which contains the information to substitute into the placehodlers. The first row of the CSV file should define column headings that match up with the keyword placeholders present in the configuration JSON file. Every subsequent row defines one email to send, and may parameterize the keywords in any way.
 
