@@ -48,15 +48,13 @@ def main():
                         help="show detailed output")
     args = vars(parser.parse_args())
 
-    # Parse the configuration JSON file.
+    # Parse configuration files, and get password if needed.
     config = parse_config(args["config"])
-
-    # If the password is not specified, get the password.
-    if "password" not in config:
-        config["password"] = getpass.getpass()
-
-    # Parse the data CSV file.
+    config["password"] = config.get("password") or getpass.getpass()
     headers, data = parse_data(args["data"])
+
+    # Connect to mail server.
+    server = mail_server(config)
 
     # Send one email for each row in the CSV file.
     for row in data:
@@ -66,17 +64,15 @@ def main():
                   if key not in ["from", "password"] else config[key]
                   for key in config}
 
-        # Send the email and print confirmation message.
-        send_email(params)
-        to = params.get("to", [])
-        recipient = ", ".join(to) if isinstance(to, list) else to
-        if args["verbose"]:
-            print("Sent email to {} with parameters {}".format(
-                  recipient, params))
-        else:
-            print("Sent email to {}".format(recipient))
+        # Prepare the message and send it.
+        msg = prepare_message(params)
+        server.send_message(msg)
+
+        # Print confirmation.
+        print_confirmation(params, args["verbose"])
 
     # Success!
+    server.quit()
     termcolor.cprint("Dispatch complete!", "green")
 
 
@@ -113,6 +109,22 @@ def format_param(contents, headers, row):
         return [format_param_string(item, headers, row) for item in contents]
     else:
         return format_param_string(contents, headers, row)
+
+
+def mail_server(config):
+    """
+    Configures SMTP server.
+    """
+
+    # Connect to server.
+    server = smtplib.SMTP(
+        config.get("server", "smtp.gmail.com"),
+        int(config.get("port", 587))
+    )
+    server.ehlo()
+    server.starttls()
+    server.login(config.get("from", ""), config.get("password", ""))
+    return server
 
 
 def parse_config(filename):
@@ -156,38 +168,37 @@ def parse_data(filename):
     return headers, data
 
 
-def send_email(params):
+def prepare_message(params):
     """
-    Sends an email.
+    Returns a MIMEText message.
     """
-
-    # Check that all required fields are present.
-    for field in ["from", "password", "subject", "body", "to"]:
-        if not params.get(field):
-            raise Error("Missing field {}.".format(field))
-
-    # Set up SMTP server.
-    server = smtplib.SMTP(
-        params.get("server", "smtp.gmail.com"),
-        int(params.get("port", 587))
-    )
-    server.ehlo()
-    server.starttls()
-    server.login(params.get("from", ""), params.get("password", ""))
 
     # Prepare message.
-    msg = MIMEText(params.get("body"), "html")
+    msg = MIMEText(params.get("body", ""), "html")
     msg["Subject"] = params.get("subject", "")
     msg["From"] = params.get("username", "")
+
+    # Add recipients.
     for field in ["to", "cc", "bcc"]:
         addresses = params.get(field, [])
         if not isinstance(addresses, list):
             addresses = [addresses]
         msg[field.capitalize()] = ", ".join(addresses)
+    return msg
 
-    # Send the message.
-    server.send_message(msg)
-    server.quit()
+
+def print_confirmation(params, verbose):
+    """
+    Prints message confirming that email was sent.
+    """
+
+    to = params.get("to", [])
+    recipient = ", ".join(to) if isinstance(to, list) else to
+    if verbose:
+        print("Sent email to {} with parameters {}".format(
+              recipient, params))
+    else:
+        print("Sent email to {}".format(recipient))
 
 
 class Error(Exception):
