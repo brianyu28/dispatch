@@ -5,15 +5,8 @@ Brian Yu
 A command-line mail merge tool.
 
 Your configuration JSON file should include:
-    - from
-    - password (optional)
-    - to (list)
-    - cc (list, optional)
-    - bcc (list, optional)
-    - subject
-    - body
-    - server (optional)
-    - port (optional)
+    - required: from, to, subject, body
+    - optional: name, password, cc, bcc, server, port
 
 Your data CSV file should include:
     - Row 0: each column is a keyword name
@@ -29,7 +22,9 @@ import sys
 import termcolor
 import traceback
 
+from email.header import Header
 from email.mime.text import MIMEText
+from email.utils import formataddr
 
 
 def main():
@@ -102,6 +97,7 @@ def make_configuration(email):
     with open("config.json", "w") as f:
         data = json.dumps({
             "from": email,
+            "name": email,
             "to": "{email}",
             "subject": "",
             "body": "Hey {name}!<br/><br/>"
@@ -216,7 +212,15 @@ def prepare_message(params):
     # Prepare message.
     msg = MIMEText(params.get("body", ""), "html")
     msg["Subject"] = params.get("subject", "")
-    msg["From"] = params.get("username", "")
+
+    # For "from" field, check for sender's name.
+    if params.get("name"):
+        msg["From"] = formataddr((
+            str(Header(params.get("name"), "utf-8")),
+            params.get("from")
+        ))
+    else:
+        msg["From"] = params.get("from", "")
 
     # Add recipients.
     for field in ["to", "cc", "bcc"]:
