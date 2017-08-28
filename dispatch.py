@@ -33,20 +33,37 @@ from email.mime.text import MIMEText
 
 
 def main():
-    """
-    Dispatch mass emails.
-    """
 
     # Set up exception handler.
     sys.excepthook = excepthook
 
     # Parse command line arguments.
     parser = argparse.ArgumentParser()
-    parser.add_argument("config", help="configuration file for dispatcher")
-    parser.add_argument("data", help="csv data file with parameters")
+    parser.add_argument("config", nargs="?",
+                        help="configuration file for dispatcher")
+    parser.add_argument("data", nargs="?",
+                        help="csv data file with parameters")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="show detailed output")
+    parser.add_argument("-m", "--make", help="create configuration files")
     args = vars(parser.parse_args())
+
+    # If -m flag used, create configuration files.
+    if args["make"]:
+        make_configuration(args["make"])
+        return
+
+    # Run dispatcher.
+    dispatch(args)
+
+
+def dispatch(args):
+    """
+    Dispatch mass emails.
+    """
+
+    if not all([args["config"], args["data"]]):
+        raise Error("Configuration and data files must be specified.")
 
     # Parse configuration files, and get password if needed.
     config = parse_config(args["config"])
@@ -74,6 +91,26 @@ def main():
     # Success!
     server.quit()
     termcolor.cprint("Dispatch complete!", "green")
+
+
+def make_configuration(email):
+    """
+    Creates a simple standard set of configuration files.
+    """
+
+    # Create the JSON configuration file.
+    with open("config.json", "w") as f:
+        data = json.dumps({
+            "from": email,
+            "to": "{email}",
+            "subject": "",
+            "body": "Hey {name}!<br/><br/>"
+        }, indent=4)
+        f.write(data)
+
+    # Create the CSV data file.
+    with open("data.csv", "w") as f:
+        f.write("email,name\n")
 
 
 def excepthook(type, value, tb):
