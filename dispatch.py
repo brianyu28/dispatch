@@ -210,7 +210,10 @@ def prepare_message(params):
     """
 
     # Prepare message.
-    msg = MIMEText(params.get("body", ""), "html")
+    msg = MIMEText(
+        params.get("body", "").replace("\n", "<br/>"),
+        "html"
+    )
     msg["Subject"] = params.get("subject", "")
 
     # For "from" field, check for sender's name.
