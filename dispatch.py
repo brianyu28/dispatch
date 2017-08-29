@@ -97,7 +97,7 @@ def make_configuration(email):
     with open("config.json", "w") as f:
         data = json.dumps({
             "from": email,
-            "name": email,
+            "name": "",
             "to": "{email}",
             "subject": "",
             "body": "Hey {name}!<br/><br/>"
