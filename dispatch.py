@@ -20,6 +20,7 @@ import json
 import smtplib
 import sys
 import termcolor
+import time
 import traceback
 
 from email.header import Header
@@ -82,6 +83,7 @@ def dispatch(args):
 
         # Print confirmation.
         print_confirmation(params, args["verbose"])
+        time.sleep(1)
 
     # Success!
     server.quit()
