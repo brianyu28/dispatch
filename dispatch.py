@@ -4,13 +4,16 @@ Brian Yu
 
 A command-line mail merge tool.
 
-Your configuration JSON file should include:
-    - required: from, to, subject, body
-    - optional: name, password, cc, bcc, server, port
-
 Your data CSV file should include:
     - Row 0: each column is a keyword name
     - Rows 1+: each column defines values for a new email
+
+Your configuration JSON file should include:
+    - required: from, to, subject, body (unless provided separately)
+    - optional: name, password, cc, bcc, server, port
+
+You may also provide an optional body text file.
+
 """
 
 import argparse
@@ -35,10 +38,12 @@ def main():
 
     # Parse command line arguments.
     parser = argparse.ArgumentParser()
-    parser.add_argument("config", nargs="?",
-                        help="configuration file for dispatcher")
     parser.add_argument("data", nargs="?",
                         help="csv data file with parameters")
+    parser.add_argument("config", nargs="?",
+                        help="configuration file for dispatcher")
+    parser.add_argument("textfile", nargs="?",
+                        help="text file containing email to send")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="show detailed output")
     parser.add_argument("-m", "--make", help="create configuration files")
@@ -64,6 +69,9 @@ def dispatch(args):
     # Parse configuration files, and get password if needed.
     config = parse_config(args["config"])
     config["password"] = config.get("password") or getpass.getpass()
+    if args["textfile"]:
+        body = open(args["textfile"]).read()
+        config["body"] = body.replace("\n", "<br/>")
     headers, data = parse_data(args["data"])
 
     # Connect to mail server.
@@ -101,14 +109,17 @@ def make_configuration(email):
             "from": email,
             "name": "",
             "to": "{email}",
-            "subject": "",
-            "body": "Hey {name}!<br/><br/>"
+            "subject": ""
         }, indent=4)
         f.write(data)
 
     # Create the CSV data file.
     with open("data.csv", "w") as f:
-        f.write("email,name\n")
+        f.write("name,email\n")
+
+    # Create an email text file.
+    with open("body.html", "w") as f:
+        f.write("Hey {name}!")
 
 
 def excepthook(type, value, tb):
