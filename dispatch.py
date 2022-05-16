@@ -244,6 +244,11 @@ def prepare_message(params):
         if not isinstance(addresses, list):
             addresses = [addresses]
         msg[field.capitalize()] = ", ".join(addresses)
+
+    # Add reply-to.
+    if params.get("reply-to"):
+        msg["reply-to"] = params.get("reply-to")
+
     return msg
 
 
