@@ -6,7 +6,7 @@ Dispatch is a command-line mail merge tool for sending custom bulk emails to a l
 
 Dispatch requires two files to start a mail merge:
 
-* A data file, typically called `data.csv`, which contains the information to substitute into the placehodlers. The first row of the CSV file should define column headings that match up with the keyword placeholders present in the configuration JSON file. Every subsequent row defines one email to send, and may parameterize the keywords in any way.
+* A data file, typically called `data.csv`, which contains the information to substitute into the placeholders. The first row of the CSV file should define column headings that match up with the keyword placeholders present in the configuration JSON file. Every subsequent row defines one email to send, and may parameterize the keywords in any way.
 * A configuration file, typically called `config.json`, which contains the sender's email address, password, recipients (to, cc, bcc), a subject line, and a body. Fields may be parameterized with a keyword placeholder between `{` and `}`, which will be substituted for by the dispatcher.
   * The configuration file may also specify a custom server and port (Gmail is the default).
   * The "from" address, the password, the server, and the port cannot be parameterized.
