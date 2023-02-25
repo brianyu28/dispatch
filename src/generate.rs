@@ -1,11 +1,10 @@
 /// Generate sample configuration files
-
 use std::error::Error;
 use std::fs;
-use std::io::{self, Write};
 use std::path::Path;
 
 use crate::config::{DispatchConfig, Recipients};
+use crate::util::prompt;
 
 pub fn generate() -> Result<(), Box<dyn Error>> {
     let email = prompt("Email address", None);
@@ -29,6 +28,7 @@ pub fn generate() -> Result<(), Box<dyn Error>> {
         to: Some(Recipients::Individual("{email}".to_string())),
         cc: None,
         bcc: None,
+        reply_to: None,
         subject: subject,
         data_path: data_path.to_string(),
         body_path: body_path.to_string(),
@@ -42,26 +42,6 @@ pub fn generate() -> Result<(), Box<dyn Error>> {
     write_file("data file", &data_path, "name,email")?;
 
     Ok(())
-}
-
-pub fn prompt(description: &str, default: Option<&str>) -> String {
-    print!("{description}");
-    if let Some(default) = default {
-        print!(" (default: {})", default);
-    }
-    print!("? ");
-    io::stdout().flush().unwrap();
-
-    let mut input = String::new();
-    io::stdin().read_line(&mut input).unwrap();
-
-    if let Some(default) = default {
-        if input.trim().len() == 0 {
-            return default.to_string();
-        }
-    }
-
-    input.trim().to_string()
 }
 
 fn write_file(name: &str, filename: &str, contents: &str) -> Result<(), Box<dyn Error>> {

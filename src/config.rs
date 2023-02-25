@@ -1,5 +1,4 @@
 /// Configuration for a Dispatch email group
-
 use std::{error::Error, fs, path::Path};
 
 use serde::{Deserialize, Serialize};
@@ -9,6 +8,8 @@ pub struct DispatchConfig {
     pub username: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub from: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reply_to: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub to: Option<Recipients>,
     #[serde(skip_serializing_if = "Option::is_none")]

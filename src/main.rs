@@ -3,6 +3,7 @@ mod config;
 mod generate;
 mod mail;
 mod send;
+mod util;
 
 use std::path::Path;
 

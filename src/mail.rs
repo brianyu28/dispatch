@@ -1,5 +1,4 @@
 /// Configure SMTP and create email messages
-
 use std::collections::HashMap;
 use std::error::Error;
 
@@ -12,7 +11,11 @@ use crate::config::{DispatchConfig, Recipients};
 
 pub type Substitutions = HashMap<String, String>;
 
-pub fn get_mailer(username: &str, server: &str, dry_run: bool) -> Result<SmtpTransport, Box<dyn Error>> {
+pub fn get_mailer(
+    username: &str,
+    server: &str,
+    dry_run: bool,
+) -> Result<SmtpTransport, Box<dyn Error>> {
     if username.len() == 0 {
         return Err("Username missing from config")?;
     }
@@ -34,22 +37,25 @@ pub fn create_message(
     body: &str,
     data: &Substitutions,
 ) -> Result<Message, Box<dyn Error>> {
-    let mut builder =
-        Message::builder()
-            .subject(substitute(&config.subject, data))
-            .header(if config.content_type == "html" {
-                ContentType::TEXT_HTML
-            } else if config.content_type == "text" {
-                ContentType::TEXT_PLAIN
-            } else {
-                Err("Invalid content type - must be html or text")?
-            });
+    let mut builder = Message::builder()
+        .subject(substitute(&config.subject, data))
+        .header(if config.content_type == "html" {
+            ContentType::TEXT_HTML
+        } else if config.content_type == "text" {
+            ContentType::TEXT_PLAIN
+        } else {
+            Err("Invalid content type - must be html or text")?
+        });
 
     let from: &str = match &config.from {
         Some(from) => from,
         None => &config.username,
     };
     builder = builder.from(mailbox_from_address(from, data)?);
+
+    if let Some(reply_to) = &config.reply_to {
+        builder = builder.reply_to(mailbox_from_address(reply_to, data)?);
+    }
 
     for to in mailboxes_from_recipients(&config.to, data)? {
         builder = builder.to(to);
