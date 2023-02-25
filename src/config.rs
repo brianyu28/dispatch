@@ -1,6 +1,7 @@
+/// Configuration for a Dispatch email group
+
 use std::{error::Error, fs, path::Path};
 
-/// Configuration for a Dispatch email group
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -45,11 +46,14 @@ impl DispatchConfig {
     }
 
     /// Use Gmail as default server if none provided
+    /// For Amazon SES, use: email-smtp.us-east-1.amazonaws.com
     fn default_server() -> String {
         "smtp.gmail.com".to_string()
     }
 }
 
+/// Represents one or more email recipients
+/// Must be formatted as either "name@domain.tld" or "Name <name@domain.tld>"
 #[derive(Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Recipients {

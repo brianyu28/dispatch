@@ -2,3 +2,4 @@ target/*
 config.json
 body.html
 data.csv
+*.swp

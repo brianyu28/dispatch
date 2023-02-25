@@ -1,4 +1,5 @@
-/// Send emails
+/// Dispatch emails
+
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::{self, File};
@@ -16,11 +17,11 @@ pub fn send(config_path: &Path, dry_run: bool, verbose: bool) -> Result<(), Box<
     let body = read_body(config_path, &config.body_path)?;
     let data = read_data(config_path, &config.data_path)?;
 
-    let mailer = get_mailer(&config.username, &config.server)?;
-    for row in data {
+    let mailer = get_mailer(&config.username, &config.server, dry_run)?;
+    for (i, row) in data.iter().enumerate() {
         let message = create_message(&config, &body, &row)?;
         if dry_run || verbose {
-            println!("----------------------------");
+            println!("---------------------------- {} of {}", i + 1, data.len());
             println!("{}\n", std::str::from_utf8(&message.formatted())?);
         }
         if !dry_run {
@@ -33,9 +34,9 @@ pub fn send(config_path: &Path, dry_run: bool, verbose: bool) -> Result<(), Box<
                 .join(", ");
             match mailer.send(&message) {
                 Ok(_) => {
-                    println!("Sent email to {}\n", to);
+                    println!("Sent email {} of {} to {}", i + 1, data.len(), to);
                 }
-                Err(e) => Err(format!("Error sending email to {}: {}\n", to, e))?,
+                Err(e) => Err(format!("Error sending email to {}: {}", to, e))?,
             }
             thread::sleep(time::Duration::from_millis(1000));
         }

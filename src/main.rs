@@ -29,9 +29,4 @@ fn main() {
         Err(e) => println!("Error: {}", e),
     };
     return;
-
-    // match mailer.send(&email) {
-    // Ok(_) => println!("Email sent successfully!"),
-    // Err(e) => panic!("Could not send email: {:?}", e),
-    // }
 }

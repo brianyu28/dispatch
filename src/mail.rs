@@ -1,3 +1,5 @@
+/// Configure SMTP and create email messages
+
 use std::collections::HashMap;
 use std::error::Error;
 
@@ -10,11 +12,15 @@ use crate::config::{DispatchConfig, Recipients};
 
 pub type Substitutions = HashMap<String, String>;
 
-pub fn get_mailer(username: &str, server: &str) -> Result<SmtpTransport, Box<dyn Error>> {
+pub fn get_mailer(username: &str, server: &str, dry_run: bool) -> Result<SmtpTransport, Box<dyn Error>> {
     if username.len() == 0 {
         return Err("Username missing from config")?;
     }
-    let password = rpassword::prompt_password(format!("Password for {}: ", username))?;
+    let password = if dry_run {
+        String::new()
+    } else {
+        rpassword::prompt_password(format!("Password for {}: ", username))?
+    };
     let credentials = Credentials::new(username.to_string(), password.to_string());
     let mailer = SmtpTransport::relay(&server)
         .unwrap()
@@ -30,7 +36,7 @@ pub fn create_message(
 ) -> Result<Message, Box<dyn Error>> {
     let mut builder =
         Message::builder()
-            .subject(&config.subject)
+            .subject(substitute(&config.subject, data))
             .header(if config.content_type == "html" {
                 ContentType::TEXT_HTML
             } else if config.content_type == "text" {
@@ -55,7 +61,13 @@ pub fn create_message(
         builder = builder.bcc(bcc);
     }
 
-    Ok(builder.body(substitute(body, data)).unwrap())
+    let body = if config.content_type == "html" {
+        body.replace("\n", "<br/>")
+    } else {
+        body.to_string()
+    };
+
+    Ok(builder.body(substitute(&body, data)).unwrap())
 }
 
 fn substitute(text: &str, substitutions: &Substitutions) -> String {
