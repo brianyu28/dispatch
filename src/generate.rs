@@ -13,7 +13,12 @@ pub fn generate() -> Result<(), Box<dyn Error>> {
     let subject = prompt("Subject", Some("Hello"));
 
     let config_path = prompt("Config Filename", Some("config.json"));
-    let body_path = prompt("Email Body Filename", Some("body.html"));
+    let body_html_path = prompt("HTML Email Body Filename", None);
+    let default_body_text_path = match body_html_path.len() {
+        0 => Some("body.txt"),
+        _ => None,
+    };
+    let body_text_path = prompt("Text Email Body Filename", default_body_text_path);
     let data_path = prompt("Data Filename", Some("data.csv"));
 
     let from = if name.len() == 0 {
@@ -31,14 +36,27 @@ pub fn generate() -> Result<(), Box<dyn Error>> {
         reply_to: None,
         subject: subject,
         data_path: data_path.to_string(),
-        body_path: body_path.to_string(),
-        content_type: "html".to_string(),
+        body_html_path: if body_html_path.len() == 0 {
+            None
+        } else {
+            Some(body_html_path.to_string())
+        },
+        body_text_path: if body_text_path.len() == 0 {
+            None
+        } else {
+            Some(body_text_path.to_string())
+        },
         server,
     };
 
     let config_text = serde_json::to_string_pretty(&config).unwrap();
     write_file("configuration file", &config_path, &config_text)?;
-    write_file("body text", &body_path, "Hi {name}")?;
+    if body_html_path.len() > 0 {
+        write_file("body html", &body_html_path, "<p>Hi {name}</p>")?;
+    }
+    if body_text_path.len() > 0 {
+        write_file("body text", &body_text_path, "Hi {name}")?;
+    }
     write_file("data file", &data_path, "name,email")?;
 
     Ok(())

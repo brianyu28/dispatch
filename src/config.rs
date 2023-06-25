@@ -19,10 +19,10 @@ pub struct DispatchConfig {
     pub subject: String,
     #[serde(rename = "data")]
     pub data_path: String,
-    #[serde(rename = "body")]
-    pub body_path: String,
-    #[serde(default = "DispatchConfig::default_content_type")]
-    pub content_type: String,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "body_html")]
+    pub body_html_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "body_text")]
+    pub body_text_path: Option<String>,
     #[serde(default = "DispatchConfig::default_server")]
     pub server: String,
 }
@@ -40,10 +40,6 @@ impl DispatchConfig {
                 path.to_str().unwrap()
             ))?
         }
-    }
-
-    fn default_content_type() -> String {
-        "html".to_string()
     }
 
     /// Use Gmail as default server if none provided

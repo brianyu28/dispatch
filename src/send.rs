@@ -14,7 +14,21 @@ use crate::util::prompt;
 
 pub fn send(config_path: &Path, dry_run: bool, verbose: bool) -> Result<(), Box<dyn Error>> {
     let config = DispatchConfig::read_from_path(&config_path)?;
-    let body = read_body(config_path, &config.body_path)?;
+
+    let body_html_template = match &config.body_html_path {
+        Some(path) => Some(read_body(&config_path, path)?.replace("\n", "<br/>")),
+        None => None,
+    };
+    let body_text_template = match &config.body_text_path {
+        Some(path) => Some(read_body(&config_path, path)?),
+        None => None,
+    };
+
+    // Email must have either an HTML or a text body
+    if body_html_template.is_none() && body_text_template.is_none() {
+        return Err("Email must have either an HTML or text body")?;
+    }
+
     let data = read_data(config_path, &config.data_path)?;
 
     // Validate subject and body to ensure variables are replaced.
@@ -22,17 +36,25 @@ pub fn send(config_path: &Path, dry_run: bool, verbose: bool) -> Result<(), Box<
     // caught by address validation errors.
     match data.first() {
         None => {
-            Err(format!("No emails to send. Add rows to {} to send emails.", &config.data_path))?;
-        },
+            Err(format!(
+                "No emails to send. Add rows to {} to send emails.",
+                &config.data_path
+            ))?;
+        }
         Some(row) => {
             validate_text(&config.subject, row)?;
-            validate_text(&body, row)?;
-        },
+            if let Some(body_html_template) = &body_html_template {
+                validate_text(body_html_template, row)?;
+            }
+            if let Some(body_text_template) = &body_text_template {
+                validate_text(body_text_template, row)?;
+            }
+        }
     }
 
     let mailer = get_mailer(&config.username, &config.server, dry_run)?;
     for (i, row) in data.iter().enumerate() {
-        let message = create_message(&config, &body, &row)?;
+        let message = create_message(&config, &body_html_template, &body_text_template, &row)?;
         if dry_run || verbose {
             println!("---------------------------- {} of {}", i + 1, data.len());
             println!("{}\n", std::str::from_utf8(&message.formatted())?);
@@ -77,7 +99,10 @@ pub fn read_body(config_path: &Path, body_path: &str) -> Result<String, Box<dyn 
     }
 }
 
-pub fn read_data(config_path: &Path, data_path: &str) -> Result<Vec<Substitutions>, Box<dyn Error>> {
+pub fn read_data(
+    config_path: &Path,
+    data_path: &str,
+) -> Result<Vec<Substitutions>, Box<dyn Error>> {
     let local_path = config_path.parent().unwrap().join(data_path);
     let data_path = Path::new(data_path);
     let data_path = if data_path.is_absolute() {
@@ -111,7 +136,13 @@ pub fn validate_text(content: &str, substitutions: &Substitutions) -> Result<(),
                 tracking = false;
             } else if char == '}' {
                 if !substitutions.contains_key(&buffer) {
-                    let confirmation = prompt(&format!("Found possibly unmatched field {{{}}}. Send anyways", &buffer), Some("n"));
+                    let confirmation = prompt(
+                        &format!(
+                            "Found possibly unmatched field {{{}}}. Send anyways",
+                            &buffer
+                        ),
+                        Some("n"),
+                    );
                     if confirmation.to_lowercase().starts_with("n") {
                         return Err("Dispatch canceled")?;
                     }
