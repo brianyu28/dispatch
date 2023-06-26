@@ -1,13 +1,15 @@
 /// Configure SMTP and create email messages
 use std::collections::HashMap;
 use std::error::Error;
+use std::fs;
+use std::path::Path;
 
 use lettre::message::header::ContentType;
-use lettre::message::{Mailbox, MultiPart};
+use lettre::message::{Attachment, Body, Mailbox, MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport};
 
-use crate::config::{DispatchConfig, Recipients};
+use crate::config::{DispatchConfig, Recipients, RelatedContentConfig};
 
 pub type Substitutions = HashMap<String, String>;
 
@@ -37,6 +39,7 @@ pub fn create_message(
     body_html_template: &Option<String>,
     body_text_template: &Option<String>,
     data: &Substitutions,
+    related_contents: &Vec<RelatedContent>,
 ) -> Result<Message, Box<dyn Error>> {
     let body_html = match body_html_template {
         Some(template) => Some(substitute(template, data)),
@@ -69,14 +72,43 @@ pub fn create_message(
         builder = builder.bcc(bcc);
     }
 
+    // Build a `multipart/related` message if the HTML message contains related content (e.g. embedded images).
+    let multipart_related_content = if related_contents.len() == 0 {
+        None
+    } else if let Some(body_html) = &body_html {
+        let mut multipart_builder =
+            MultiPart::related().singlepart(SinglePart::html(String::from(body_html)));
+        for related_content in related_contents {
+            multipart_builder = multipart_builder.singlepart(
+                Attachment::new_inline(String::from(&related_content.content_id)).body(
+                    related_content.body.clone(),
+                    related_content.mime_type.parse().unwrap(),
+                ),
+            )
+        }
+        Some(multipart_builder)
+    } else {
+        None
+    };
+
     let message = match (body_html, body_text) {
-        (Some(body_html), Some(body_text)) => builder
-            .multipart(MultiPart::alternative_plain_html(body_text, body_html))
-            .unwrap(),
-        (Some(body_html), None) => builder
-            .header(ContentType::TEXT_HTML)
-            .body(body_html)
-            .unwrap(),
+        (Some(body_html), Some(body_text)) => {
+            let alternative = MultiPart::alternative().singlepart(SinglePart::plain(body_text));
+            let alternative = match multipart_related_content {
+                None => alternative.singlepart(SinglePart::html(body_html)),
+                Some(multipart_related_content) => alternative.multipart(multipart_related_content),
+            };
+            builder.multipart(alternative).unwrap()
+        }
+        (Some(body_html), None) => match multipart_related_content {
+            None => builder
+                .header(ContentType::TEXT_HTML)
+                .body(body_html)
+                .unwrap(),
+            Some(multipart_related_content) => {
+                builder.multipart(multipart_related_content).unwrap()
+            }
+        },
         (None, Some(body_text)) => builder
             .header(ContentType::TEXT_PLAIN)
             .body(body_text)
@@ -85,6 +117,18 @@ pub fn create_message(
     };
 
     Ok(message)
+}
+
+fn create_file_body(config_path: &Path, file_path: &str) -> Result<Body, Box<dyn Error>> {
+    let local_path = config_path.parent().unwrap().join(file_path);
+    let file_path = Path::new(file_path);
+    let file_path = if file_path.is_absolute() {
+        file_path
+    } else {
+        &local_path
+    };
+    let file = fs::read(file_path)?;
+    Ok(Body::new(file))
 }
 
 fn substitute(text: &str, substitutions: &Substitutions) -> String {
@@ -121,5 +165,25 @@ fn mailbox_from_address(
     match substitute(address, substitutions).parse() {
         Ok(address) => Ok(address),
         Err(e) => Err(format!("Could not parse address {}: {}", address, e))?,
+    }
+}
+
+pub struct RelatedContent {
+    pub content_id: String,
+    pub mime_type: String,
+    pub body: Body,
+}
+
+impl RelatedContent {
+    pub fn new(
+        config_path: &Path,
+        config: &RelatedContentConfig,
+    ) -> Result<RelatedContent, Box<dyn Error>> {
+        let body = create_file_body(config_path, &config.path)?;
+        Ok(RelatedContent {
+            content_id: String::from(&config.content_id),
+            mime_type: String::from(&config.mime_type),
+            body,
+        })
     }
 }

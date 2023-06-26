@@ -46,6 +46,7 @@ pub fn generate() -> Result<(), Box<dyn Error>> {
         } else {
             Some(body_text_path.to_string())
         },
+        related_content: None,
         server,
     };
 

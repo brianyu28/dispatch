@@ -23,8 +23,17 @@ pub struct DispatchConfig {
     pub body_html_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "body_text")]
     pub body_text_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub related_content: Option<Vec<RelatedContentConfig>>,
     #[serde(default = "DispatchConfig::default_server")]
     pub server: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RelatedContentConfig {
+    pub content_id: String,
+    pub mime_type: String,
+    pub path: String,
 }
 
 impl DispatchConfig {

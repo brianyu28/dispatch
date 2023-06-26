@@ -9,7 +9,7 @@ use csv::ReaderBuilder;
 use lettre::Transport;
 
 use crate::config::DispatchConfig;
-use crate::mail::{create_message, get_mailer, Substitutions};
+use crate::mail::{create_message, get_mailer, RelatedContent, Substitutions};
 use crate::util::prompt;
 
 pub fn send(config_path: &Path, dry_run: bool, verbose: bool) -> Result<(), Box<dyn Error>> {
@@ -28,6 +28,18 @@ pub fn send(config_path: &Path, dry_run: bool, verbose: bool) -> Result<(), Box<
     if body_html_template.is_none() && body_text_template.is_none() {
         return Err("Email must have either an HTML or text body")?;
     }
+
+    // Get all related content files
+    let mut related_contents: Vec<RelatedContent> = Vec::new();
+    match &config.related_content {
+        None => {}
+        Some(related_content_configs) => {
+            for config in related_content_configs {
+                let related_content = RelatedContent::new(config_path, config)?;
+                related_contents.push(related_content);
+            }
+        }
+    };
 
     let data = read_data(config_path, &config.data_path)?;
 
@@ -53,8 +65,15 @@ pub fn send(config_path: &Path, dry_run: bool, verbose: bool) -> Result<(), Box<
     }
 
     let mailer = get_mailer(&config.username, &config.server, dry_run)?;
+
     for (i, row) in data.iter().enumerate() {
-        let message = create_message(&config, &body_html_template, &body_text_template, &row)?;
+        let message = create_message(
+            &config,
+            &body_html_template,
+            &body_text_template,
+            &row,
+            &related_contents,
+        )?;
         if dry_run || verbose {
             println!("---------------------------- {} of {}", i + 1, data.len());
             println!("{}\n", std::str::from_utf8(&message.formatted())?);
