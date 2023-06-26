@@ -75,8 +75,9 @@ file can have the following fields:
   be a single address or an array of addresses. Each address may have a name.
 - `bcc` (optional): The email address(es) for the "Bcc" header of the email. Can
   be a single address or an array of addresses. Each address may have a name.
-- `content_type` (optional): The content type of the email body. Must be `html`
   or `text`. If none provided, `html` is used.
+- `related_content` (optional): A list of related content (e.g. inline images)
+  to include in the email.
 
 The subject field (`subject`) and mailbox fields (`from`, `reply_to`, `to`,
 `cc`, `bcc`) of the configuration file file may include parameters of the form
@@ -129,6 +130,27 @@ Example data file:
 email,name
 person1@example.com,Person 1
 person2@example.com,Person 2
+```
+
+### Related Content (optional)
+
+To add an inline image, add the following to `related_content` in the
+configuration file, giving each a `content_id` of your choice.
+
+```json
+"related_content": [
+  {
+    "content_id": "chosen_image_id",
+    "mime_type": "image/png",
+    "path": "path_to_image.png",
+  }
+]
+```
+
+Add the image into the HTML body of your email with:
+
+```html
+<img src=cid:chosen_image_id />
 ```
 
 ## Notes
