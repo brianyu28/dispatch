@@ -35,11 +35,11 @@ pub fn get_mailer(
 }
 
 pub fn create_message(
+    config_path: &Path,
     config: &DispatchConfig,
     body_html_template: &Option<String>,
     body_text_template: &Option<String>,
     data: &Substitutions,
-    related_contents: &Vec<RelatedContent>,
 ) -> Result<Message, Box<dyn Error>> {
     let body_html = match body_html_template {
         Some(template) => Some(substitute(template, data)),
@@ -71,6 +71,18 @@ pub fn create_message(
     for bcc in mailboxes_from_recipients(&config.bcc, data)? {
         builder = builder.bcc(bcc);
     }
+
+    // Get all related content files
+    let mut related_contents: Vec<RelatedContent> = Vec::new();
+    match &config.related_content {
+        None => {}
+        Some(related_content_configs) => {
+            for config in related_content_configs {
+                let related_content = RelatedContent::new(config_path, config, data)?;
+                related_contents.push(related_content);
+            }
+        }
+    };
 
     // Build a `multipart/related` message if the HTML message contains related content (e.g. embedded images).
     let multipart_related_content = if related_contents.len() == 0 {
@@ -178,8 +190,15 @@ impl RelatedContent {
     pub fn new(
         config_path: &Path,
         config: &RelatedContentConfig,
+        substitutions: &Substitutions,
     ) -> Result<RelatedContent, Box<dyn Error>> {
-        let body = create_file_body(config_path, &config.path)?;
+        let content_path = substitute(&config.path, substitutions);
+        let Ok(body) = create_file_body(config_path, &content_path) else {
+            return Err(format!(
+                "Could not read related content file {}",
+                &content_path
+            ))?;
+        };
         Ok(RelatedContent {
             content_id: String::from(&config.content_id),
             mime_type: String::from(&config.mime_type),
